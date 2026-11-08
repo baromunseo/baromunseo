@@ -10,7 +10,7 @@ HWP·HWPX 문서를 **더블클릭하면 바로 열고, 인쇄하고, 간단히 
 
 ## 설치
 
-[Releases](https://github.com/KinDoyag/baromunseo/releases)에서 `baromunseo-Setup-버전.exe`를 받아 실행합니다. 서명 인증서가 없어서 처음에 "Windows의 PC 보호" 창이 뜰 수 있습니다. **추가 정보 → 실행**을 누르면 설치됩니다.
+[Releases](https://github.com/baromunseo/baromunseo/releases)에서 `baromunseo-Setup-버전.exe`를 받아 실행합니다. 서명 인증서가 없어서 처음에 "Windows의 PC 보호" 창이 뜰 수 있습니다. **추가 정보 → 실행**을 누르면 설치됩니다.
 
 ## 알아 둘 점
 

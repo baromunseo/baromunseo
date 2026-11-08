@@ -1,12 +1,12 @@
 {
   "name": "baromunseo",
   "productName": "바로문서",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "HWP/HWPX 문서를 더블클릭하면 바로 열고, 인쇄하고, 간단히 고치는 무료 PC 프로그램 (rhwp 기반)",
   "main": "src/main.js",
   "license": "MIT",
-  "author": "KinDoyag",
-  "repository": "https://github.com/KinDoyag/baromunseo",
+  "author": "baromunseo",
+  "repository": "https://github.com/baromunseo/baromunseo",
   "scripts": {
     "start": "electron .",
     "test": "node --test tests/lib.test.js tests/equation.test.mjs",
@@ -21,7 +21,7 @@
     "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "io.github.kindoyag.baromunseo",
+    "appId": "io.github.baromunseo",
     "productName": "바로문서",
     "files": ["src/**", "studio/**", "third_party/**", "package.json", "LICENSE"],
     "win": {
@@ -39,6 +39,6 @@
       { "ext": "hwp", "name": "HWP 문서", "description": "HWP 문서", "role": "Editor" },
       { "ext": "hwpx", "name": "HWPX 문서", "description": "HWPX 문서", "role": "Editor" }
     ],
-    "publish": [{ "provider": "github", "owner": "KinDoyag", "repo": "baromunseo", "releaseType": "release" }]
+    "publish": [{ "provider": "github", "owner": "baromunseo", "repo": "baromunseo", "releaseType": "release" }]
   }
 }
