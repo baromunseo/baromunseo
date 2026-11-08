@@ -1,0 +1,186 @@
+diff --git a/rhwp-studio/src/core/equation-pua-fallback.ts b/rhwp-studio/src/core/equation-pua-fallback.ts
+new file mode 100644
+index 000000000..b385b206c
+--- /dev/null
++++ b/rhwp-studio/src/core/equation-pua-fallback.ts
+@@ -0,0 +1,96 @@
++/**
++ * 한컴 수식 face(HyhwpEQ·HancomEQN)의 사설 영역(PUA) 글리프 코드를 의미 문자로 되돌린다.
++ *
++ * 엔진은 수식의 기울인 변수·숫자·쉼표·괄호 등을 `HyhwpEQ`의 PUA 코드로 그린다
++ * (`src/renderer/equation/hancom_glyphs.rs`의 `glyph()`). 그 face가 PC에 없으면 어떤 대체
++ * 글꼴에도 그 코드가 없어 □(.notdef)로 그려진다. 한컴이 없는 PC를 위해, face가 없을 때만
++ * 코드를 원래 문자로 되돌려 수학 글꼴로 그린다. 표는 `glyph()`/`semantic_fallback_glyph`와
++ * 같은 규칙으로 만든다(HyhwpEQ는 그리스 문자·큰 연산자 PUA를 쓰지 않는다).
++ */
++
++export interface DecodedGlyph {
++  ch: string;
++  /** 소문자 기울인 변수는 PUA 글리프 자체가 기울어 있다. 대체 글꼴은 italic으로 그려야 한다. */
++  italic: boolean;
++}
++
++export const EQUATION_FALLBACK_FAMILIES = "'Latin Modern Math', 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif";
++
++const EQUATION_FACE = /^(hyhwpeq|hancomeqn)$/i;
++
++export function isEquationFace(family: string): boolean {
++  return EQUATION_FACE.test(family.trim().replace(/^["']|["']$/g, ''));
++}
++
++function buildTable(extended: boolean): Map<number, DecodedGlyph> {
++  const map = new Map<number, DecodedGlyph>();
++  const put = (code: number, ch: string, italic = false) => { if (!map.has(code)) map.set(code, { ch, italic }); };
++  for (let i = 0; i < 26; i++) {
++    put(0xe000 + i, String.fromCharCode(65 + i));         // 기울인 대문자(기울기는 엔진이 shear로 준다)
++    put(0xe0e5 + i, String.fromCharCode(97 + i), true);   // 기울인 소문자
++  }
++  put(0xe03d, '0');
++  for (let d = 1; d <= 9; d++) put(0xe033 + d, String(d));
++  const ops: Array<[number, string]> = [
++    [0xe048, '+'], [0xe046, '-'], [0xe047, '='], [0xe04f, ':'], [0xe055, '<'], [0xe056, '>'],
++    [0xe052, ','], [0xe044, '('], [0xe045, ')'], [0xe050, "'"], [0xe042, '%'],
++  ];
++  for (const [code, ch] of ops) put(code, ch);
++  if (extended) {
++    [...'αβγδεζηθικλμνξοπρστυφχψω'].forEach((c, i) => put(0xe09d + i, c));
++    [...'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ'].forEach((c, i) => put(0xe085 + i, c));
++    put(0xe067, '∑');
++  }
++  return map;
++}
++
++const TABLES = { hyhwpeq: buildTable(false), hancomeqn: buildTable(true) };
++
++export function decodeEquationGlyph(family: string, ch: string): DecodedGlyph | null {
++  const code = ch.codePointAt(0) ?? 0;
++  if (code < 0xe000 || code > 0xf8ff) return null;
++  const key = family.trim().replace(/^["']|["']$/g, '').toLowerCase() as keyof typeof TABLES;
++  return TABLES[key]?.get(code) ?? null;
++}
++
++/** 문자열 전체를 되돌린다. 하나라도 기울인 소문자가 있으면 italic. */
++export function decodeEquationText(family: string, text: string): DecodedGlyph | null {
++  let changed = false;
++  let italic = false;
++  let out = '';
++  for (const c of text) {
++    const d = decodeEquationGlyph(family, c);
++    if (d) { changed = true; italic ||= d.italic; out += d.ch; } else out += c;
++  }
++  return changed ? { ch: out, italic } : null;
++}
++
++/**
++ * 이 PC에서 수식 face가 실제로 그려지는지 한 번만 잰다. 없는 글꼴 이름과 PUA 글자 폭이 같으면 없는 것이다.
++ * `setFont`는 제품의 전역 치환을 거치지 않는 원시 setter여야 한다.
++ */
++const availability = new Map<string, boolean>();
++export function equationFaceAvailable(family: string, setFont: (ctx: CanvasRenderingContext2D, v: string) => void): boolean {
++  const key = family.toLowerCase();
++  const known = availability.get(key);
++  if (known !== undefined) return known;
++  let ok = false;
++  try {
++    // 시험용: 한컴 수식 글꼴이 없는 PC(학원 PC)를 흉내 낸다.
++    if (localStorage.getItem('rhwp.debug.noEquationFace') === '1') { availability.set(key, false); return false; }
++    const canvas = document.createElement('canvas');
++    const ctx = canvas.getContext('2d');
++    if (ctx) {
++      const probe = '';
++      setFont(ctx, `100px "${family}", "__rhwp_missing_face__"`);
++      const withFace = ctx.measureText(probe).width;
++      setFont(ctx, '100px "__rhwp_missing_face__"');
++      const without = ctx.measureText(probe).width;
++      ok = Math.abs(withFace - without) > 0.5;
++    }
++  } catch {
++    ok = false;
++  }
++  availability.set(key, ok);
++  return ok;
++}
+diff --git a/rhwp-studio/src/core/wasm-bridge.ts b/rhwp-studio/src/core/wasm-bridge.ts
+index cebf9b402..b521d194f 100644
+--- a/rhwp-studio/src/core/wasm-bridge.ts
++++ b/rhwp-studio/src/core/wasm-bridge.ts
+@@ -232,7 +232,8 @@ import {
+   parseCssFontFamilyList,
+   completeFontFamilyList,
+ } from './font-substitution';
+-import { rememberRawCanvasFontDescriptor } from './canvas-font-raw';
++import { rememberRawCanvasFontDescriptor, setRawCanvasFont } from './canvas-font-raw';
++import { isEquationFace, equationFaceAvailable, decodeEquationText, EQUATION_FALLBACK_FAMILIES } from './equation-pua-fallback';
+ import type { FileSystemFileHandleLike } from '@/command/file-system-access';
+ 
+ /**
+@@ -266,6 +267,12 @@ function substituteCssFontFamily(cssFont: string): string {
+   const primary = incoming[0];
+   if (!primary) return cssFont;
+ 
++  // 한컴 수식 face는 자기 PUA 코드로만 그릴 수 있어 다른 face로 바꾸면 □가 된다(SVG 경로와 같게 그대로 둔다).
++  // 이 PC에 face가 없으면 수학 글꼴로 바꾸고, fillText에서 PUA 코드를 원래 문자로 되돌린다.
++  if (isEquationFace(primary)) {
++    return equationFaceAvailable(primary, setRawCanvasFont) ? cssFont : prefix + EQUATION_FALLBACK_FAMILIES;
++  }
++
+   // 같은 원 이름의 언어 슬롯에 다른 대체가 있으면 엔진이 지정한 체인을 따른다.
+   const declaredTargets = documentSubstituteFamilies(primary).filter(target => incoming.includes(target));
+   const studioChain = fontFamilyCandidatesForDisplay(primary, 0, 0,
+@@ -305,6 +312,42 @@ function withCanvasFontResolution<T>(session: HostCanvasFontSession | null, oper
+   return withHostCanvasFonts(session, () => canvasFontResolution.run(operation));
+ }
+ 
++const MISSING_EQUATION_FACE = Symbol('missingEquationFace');
++type EquationAwareContext = CanvasRenderingContext2D & { [MISSING_EQUATION_FACE]?: string | null };
++
++/** 요청 글꼴이 이 PC에 없는 한컴 수식 face면 그 이름을, 아니면 null. */
++function missingEquationFace(cssFont: string): string | null {
++  const pxIdx = cssFont.indexOf('px ');
++  if (pxIdx < 0) return null;
++  const primary = parseCssFontFamilyList(cssFont.substring(pxIdx + 3))[0];
++  if (!primary || !isEquationFace(primary)) return null;
++  return equationFaceAvailable(primary, setRawCanvasFont) ? null : primary;
++}
++
++/** 수식 face가 없을 때 PUA 코드를 의미 문자로 바꿔 그린다. 기울인 소문자는 italic으로 그린다. */
++function installEquationTextFallback(proto: CanvasRenderingContext2D): void {
++  for (const method of ['fillText', 'strokeText', 'measureText'] as const) {
++    const original = proto[method] as (this: CanvasRenderingContext2D, ...args: unknown[]) => unknown;
++    Object.defineProperty(proto, method, {
++      configurable: true,
++      writable: true,
++      value(this: EquationAwareContext, text: unknown, ...rest: unknown[]) {
++        const face = this[MISSING_EQUATION_FACE];
++        const decoded = face ? decodeEquationText(face, String(text)) : null;
++        if (!decoded) return original.call(this, text, ...rest);
++        if (!decoded.italic) return original.call(this, decoded.ch, ...rest);
++        const font = this.font;
++        setRawCanvasFont(this, /italic/.test(font) ? font : `italic ${font}`);
++        try {
++          return original.call(this, decoded.ch, ...rest);
++        } finally {
++          setRawCanvasFont(this, font);
++        }
++      },
++    });
++  }
++}
++
+ function installCanvasFontSubstitution(): void {
+   if (canvasFontSubstitutionInstalled) return;
+   if (typeof CanvasRenderingContext2D === 'undefined') return;
+@@ -321,9 +364,12 @@ function installCanvasFontSubstitution(): void {
+       return descriptor.get!.call(this);
+     },
+     set(value: string) {
+-      descriptor.set!.call(this, canvasFontResolution.resolve(String(value)));
++      const text = String(value);
++      descriptor.set!.call(this, canvasFontResolution.resolve(text));
++      (this as EquationAwareContext)[MISSING_EQUATION_FACE] = missingEquationFace(text);
+     },
+   });
++  installEquationTextFallback(proto);
+   canvasFontSubstitutionInstalled = true;
+ }
+ 

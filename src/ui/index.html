@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>바로문서</title>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body>
+  <header class="bar">
+    <button id="b-open" title="문서 열기 (Ctrl+O)">열기</button>
+    <button id="b-save" title="저장 (Ctrl+S) — 이전 판은 백업 폴더에 남습니다">저장</button>
+    <button id="b-saveas" title="다른 이름으로 저장 (Ctrl+Shift+S)">다른 이름으로</button>
+    <span class="sep"></span>
+    <button id="b-preview" title="인쇄 미리보기">미리보기</button>
+    <button id="b-print" title="인쇄 (Ctrl+P) — 쪽 범위·모아찍기·양면은 인쇄 창에서">인쇄</button>
+    <button id="b-pdf" title="PDF로 저장">PDF로 저장</button>
+    <button id="b-batch" title="여러 문서를 골라 한 번에 인쇄">여러 문서 인쇄</button>
+    <span class="sep"></span>
+    <button id="b-blank" title="빈 문서 만들기">빈 문서</button>
+    <button id="b-template" title="양식 폴더의 문서를 사본으로 열기">양식으로 새 문서</button>
+    <span class="grow"></span>
+    <span id="status" aria-live="polite"></span>
+    <button id="b-more" title="최근 문서·백업·양식 폴더" aria-haspopup="true">⋯</button>
+  </header>
+  <div id="more" class="more" hidden>
+    <strong>최근 문서</strong>
+    <div id="recent"></div>
+    <hr>
+    <button data-folder="backup">백업 폴더 열기</button>
+    <button data-folder="template">양식 폴더 열기</button>
+    <button id="b-fontask">글꼴 안내 다시 보기</button>
+    <p id="about"></p>
+  </div>
+  <main id="editor"></main>
+  <div id="batch-host" aria-hidden="true"></div>
+  <script type="module" src="shell.js"></script>
+</body>
+</html>
