@@ -1,7 +1,7 @@
 {
   "name": "baromunseo",
   "productName": "바로문서",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "HWP/HWPX 문서를 더블클릭하면 바로 열고, 인쇄하고, 간단히 고치는 무료 PC 프로그램 (rhwp 기반)",
   "main": "src/main.js",
   "license": "MIT",
