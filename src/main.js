@@ -104,6 +104,7 @@ function createWindow(docPath = null) {
   const win = new BrowserWindow({
     width: 1400, height: 920, minWidth: 900, minHeight: 600,
     title: docPath ? path.basename(docPath) : '바로문서',
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   const wc = win.webContents;
