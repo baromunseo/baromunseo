@@ -4,3 +4,8 @@ dist/
 *.log
 # 개인 작업 메모
 기능정리.md
+# 비밀 키·설정 (공개 저장소라서 올리지 않음)
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
